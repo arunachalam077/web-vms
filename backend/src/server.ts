@@ -1,48 +1,67 @@
-import express, { Express, Request, Response } from 'express';
+import express from 'express';
 import cors from 'cors';
+import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import connectDB from './config/database';
 import userRoutes from './routes/userRoutes';
 import visitorRoutes from './routes/visitorRoutes';
 
 dotenv.config();
 
-// Connect to database
-connectDB();
-
-const app: Express = express();
-const port = 3001; // Hardcoded to 3001 for now
-
-console.log('Starting server on port:', port);
-
-// CORS configuration
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  next();
-});
+const app = express();
 
 // Middleware
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://192.168.1.61:5173', 'http://192.168.1.61:5174'],
+  credentials: true
+}));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// Root route for health check and API info
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Visitor Management System API',
+    version: '1.0.0',
+    endpoints: {
+      users: '/api/users',
+      visitors: '/api/visitors'
+    }
+  });
+});
 
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/visitors', visitorRoutes);
 
-// Basic route
-app.get('/', (req: Request, res: Response) => {
-  res.json({ message: 'Welcome to the API' });
-});
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/visitor-management')
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => console.error('MongoDB connection error:', err));
 
 // Start server
-app.listen(port, () => {
-  console.log(`⚡️[server]: Server is running at http://localhost:${port}`);
+const PORT = 3001; // Force port 3001
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on port ${PORT}`);
+  console.log(`Local: http://localhost:${PORT}`);
+  console.log(`Network: http://192.168.1.61:${PORT}`);
+}).on('error', (err: Error & { code?: string }) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Please try a different port or kill the process using this port.`);
+    process.exit(1);
+  } else {
+    console.error('Server error:', err);
+    process.exit(1);
+  }
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  server.close(() => {
+    console.log('HTTP server closed');
+    mongoose.connection.close().then(() => {
+      console.log('MongoDB connection closed');
+      process.exit(0);
+    });
+  });
 }); 

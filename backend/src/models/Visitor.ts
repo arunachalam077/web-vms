@@ -10,6 +10,7 @@ export interface IVisitor extends mongoose.Document {
   checkOutTime: Date | null;
   status: 'checked-in' | 'checked-out';
   visitDate: Date;
+  exitCode: string;
 }
 
 const visitorSchema = new mongoose.Schema({
@@ -55,6 +56,11 @@ const visitorSchema = new mongoose.Schema({
   visitDate: {
     type: Date,
     required: [true, 'Please provide visit date'],
+  },
+  exitCode: {
+    type: String,
+    required: true,
+    unique: true,
   },
 }, {
   timestamps: true,

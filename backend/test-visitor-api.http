@@ -1,0 +1,20 @@
+### Register a new visitor
+POST http://localhost:5000/api/visitors/register
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "phoneNumber": "1234567890",
+  "purpose": "Meeting",
+  "visitingWhom": "Jane Smith",
+  "guardName": "Mike Johnson",
+  "guardId": "G123"
+}
+
+### Checkout a visitor (replace {exitCode} with actual code)
+POST http://localhost:5000/api/visitors/checkout
+Content-Type: application/json
+
+{
+  "exitCode": "VST1234_1430"
+} 

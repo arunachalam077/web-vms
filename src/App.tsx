@@ -12,6 +12,7 @@ import Settings from './pages/Settings';
 import Help from './pages/Help';
 import Login from './components/dashboard/login';
 import Signup from './components/dashboard/signup';
+import CheckoutPage from './pages/CheckoutPage';
 
 function App() {
   return (
@@ -32,6 +33,9 @@ function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/help" element={<Help />} />
           </Route>
+
+          {/* Checkout route */}
+          <Route path="/checkout" element={<CheckoutPage />} />
 
           {/* Fallback route */}
           <Route path="*" element={<Navigate to="/" replace />} />

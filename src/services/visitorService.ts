@@ -1,6 +1,9 @@
 import { Visitor, VisitorFilters, DashboardStats } from '../types';
+import api from './api';
 
-const API_URL = 'http://localhost:3001/api/visitors';
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://localhost:3001/api'
+  : 'http://192.168.1.61:3001/api';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -15,21 +18,13 @@ const getAuthHeaders = () => {
 export const getAllVisitors = async (page: number = 1, limit: number = 10): Promise<{ data: Visitor[], pagination: { total: number, page: number, limit: number, totalPages: number } }> => {
   try {
     console.log('Fetching visitors with pagination:', { page, limit });
-    const response = await fetch(`${API_URL}?page=${page}&limit=${limit}`, {
-      headers: getAuthHeaders(),
-    });
+    const response = await api.get(`/visitors?page=${page}&limit=${limit}`);
     
-    if (!response.ok) {
-      console.error('API Error:', response.status, response.statusText);
-      throw new Error(`Failed to fetch visitors (${response.status})`);
-    }
-    
-    const result = await response.json();
-    console.log('Fetched visitors with pagination:', result);
+    console.log('Fetched visitors with pagination:', response.data);
     
     return {
-      data: result.data || [],
-      pagination: result.pagination || {
+      data: response.data.data || [],
+      pagination: response.data.pagination || {
         total: 0,
         page: 1,
         limit: 10,
@@ -46,20 +41,10 @@ export const getAllVisitors = async (page: number = 1, limit: number = 10): Prom
 export const addVisitor = async (visitorData: Omit<Visitor, 'id' | 'checkInTime' | 'checkOutTime' | 'status'>): Promise<Visitor> => {
   try {
     console.log('Adding new visitor:', visitorData);
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: getAuthHeaders(),
-      body: JSON.stringify(visitorData),
-    });
+    const response = await api.post('/visitors', visitorData);
     
-    if (!response.ok) {
-      console.error('API Error:', response.status, response.statusText);
-      throw new Error(`Failed to register visitor (${response.status})`);
-    }
-    
-    const data = await response.json();
-    console.log('Visitor added successfully:', data);
-    return data.data || data;
+    console.log('Visitor added successfully:', response.data);
+    return response.data.data || response.data;
   } catch (error) {
     console.error('Error in addVisitor:', error);
     throw error;
@@ -70,37 +55,10 @@ export const addVisitor = async (visitorData: Omit<Visitor, 'id' | 'checkInTime'
 export const checkOutVisitor = async (visitorId: string): Promise<Visitor> => {
   try {
     console.log(`Checking out visitor with ID: ${visitorId}`);
-    const response = await fetch(`${API_URL}/${visitorId}/checkout`, {
-      method: 'PUT',
-      headers: getAuthHeaders(),
-    });
+    const response = await api.put(`/visitors/${visitorId}/checkout`);
     
-    if (!response.ok) {
-      // Try alternative endpoint format if the first one fails
-      try {
-        console.log('First endpoint failed, trying alternative endpoint');
-        const alternativeResponse = await fetch(`${API_URL}/checkout/${visitorId}`, {
-          method: 'PUT',
-          headers: getAuthHeaders(),
-        });
-        
-        if (alternativeResponse.ok) {
-          const data = await alternativeResponse.json();
-          console.log('Checkout successful using alternative endpoint:', data);
-          return data.data || data;
-        } else {
-          console.error('Alternative endpoint also failed:', alternativeResponse.status, alternativeResponse.statusText);
-        }
-      } catch (err) {
-        console.error('Error with alternative endpoint:', err);
-      }
-      
-      throw new Error(`Failed to check out visitor: ${response.status} ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    console.log('Visitor checked out successfully:', data);
-    return data.data || data;
+    console.log('Visitor checked out successfully:', response.data);
+    return response.data.data || response.data;
   } catch (error) {
     console.error('Error checking out visitor:', error);
     throw error;
@@ -111,15 +69,7 @@ export const checkOutVisitor = async (visitorId: string): Promise<Visitor> => {
 export const deleteVisitor = async (visitorId: string): Promise<void> => {
   try {
     console.log(`Deleting visitor with ID: ${visitorId}`);
-    const response = await fetch(`${API_URL}/${visitorId}`, {
-      method: 'DELETE',
-      headers: getAuthHeaders(),
-    });
-    
-    if (!response.ok) {
-      console.error('API Error:', response.status, response.statusText);
-      throw new Error(`Failed to delete visitor: ${response.status} ${response.statusText}`);
-    }
+    await api.delete(`/visitors/${visitorId}`);
     
     console.log('Visitor deleted successfully');
   } catch (error) {
