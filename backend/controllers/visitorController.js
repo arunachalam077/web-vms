@@ -1,0 +1,194 @@
+const Visitor = require('../models/Visitor');
+
+// Register a new visitor
+exports.registerVisitor = async (req, res) => {
+  try {
+    const visitor = new Visitor(req.body);
+    await visitor.save();
+    res.status(201).json({
+      success: true,
+      data: visitor
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+// Get all visitors with optional filtering
+exports.getAllVisitors = async (req, res) => {
+  try {
+    const { search, status, host, startDate, endDate } = req.query;
+    
+    // Build query
+    const query = {};
+    
+    if (search) {
+      query.$or = [
+        { fullName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phoneNumber: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (status) {
+      query.status = status;
+    }
+    
+    if (host) {
+      query.hostName = { $regex: host, $options: 'i' };
+    }
+    
+    if (startDate || endDate) {
+      query.visitDate = {};
+      if (startDate) query.visitDate.$gte = new Date(startDate);
+      if (endDate) query.visitDate.$lte = new Date(endDate);
+    }
+    
+    const visitors = await Visitor.find(query)
+      .sort({ visitDate: -1, checkInTime: -1 });
+    
+    res.status(200).json({
+      success: true,
+      count: visitors.length,
+      data: visitors
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+// Get visitor by ID
+exports.getVisitorById = async (req, res) => {
+  try {
+    const visitor = await Visitor.findById(req.params.id);
+    
+    if (!visitor) {
+      return res.status(404).json({
+        success: false,
+        error: 'Visitor not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: visitor
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+// Check out a visitor
+exports.checkOutVisitor = async (req, res) => {
+  try {
+    const visitor = await Visitor.findById(req.params.id);
+    
+    if (!visitor) {
+      return res.status(404).json({
+        success: false,
+        error: 'Visitor not found'
+      });
+    }
+    
+    if (visitor.status === 'checked-out') {
+      return res.status(400).json({
+        success: false,
+        error: 'Visitor is already checked out'
+      });
+    }
+    
+    visitor.status = 'checked-out';
+    visitor.checkOutTime = new Date();
+    await visitor.save();
+    
+    res.status(200).json({
+      success: true,
+      data: visitor
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+// Delete a visitor
+exports.deleteVisitor = async (req, res) => {
+  try {
+    const visitor = await Visitor.findByIdAndDelete(req.params.id);
+    
+    if (!visitor) {
+      return res.status(404).json({
+        success: false,
+        error: 'Visitor not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: {}
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+// Get unique hosts
+exports.getUniqueHosts = async (req, res) => {
+  try {
+    const hosts = await Visitor.distinct('hostName');
+    res.status(200).json({
+      success: true,
+      data: hosts
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+// Get visitor statistics
+exports.getVisitorStats = async (req, res) => {
+  try {
+    const totalVisitors = await Visitor.countDocuments();
+    const checkedInVisitors = await Visitor.countDocuments({ status: 'checked-in' });
+    const checkedOutVisitors = await Visitor.countDocuments({ status: 'checked-out' });
+    
+    // Get today's visitors
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayVisitors = await Visitor.countDocuments({
+      visitDate: { $gte: today }
+    });
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        totalVisitors,
+        checkedInVisitors,
+        checkedOutVisitors,
+        todayVisitors
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+}; 
