@@ -13,6 +13,7 @@ import Help from './pages/Help';
 import Login from './components/dashboard/login';
 import Signup from './components/dashboard/signup';
 import CheckoutPage from './pages/CheckoutPage';
+import PreRegistrationForm from './components/visitors/PreRegistrationForm';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/pre-registration" element={<PreRegistrationForm />} />
 
           {/* Protected routes */}
           <Route element={<Layout><ProtectedRoute><Outlet /></ProtectedRoute></Layout>}>

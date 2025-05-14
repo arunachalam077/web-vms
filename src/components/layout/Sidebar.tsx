@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Users, UserPlus, Clock, Settings, HelpCircle, QrCode, Scan } from 'lucide-react';
+import PreRegistrationForm from '../visitors/PreRegistrationForm';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -102,6 +103,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             >
               <QrCode className="w-5 h-5" />
               <span className="ml-3">QR Generator</span>
+            </NavLink>
+          </li>
+          <li>
+            <NavLink
+              to="/pre-registration"
+              className={({ isActive }) => 
+                `flex items-center p-3 rounded-lg ${
+                  isActive ? 'bg-primary-800 text-white' : 'text-gray-300 hover:bg-primary-900'
+                }`
+              }
+              onClick={onClose}
+            >
+              <UserPlus className="w-5 h-5" />
+              <span className="ml-3">Pre-Registration</span>
             </NavLink>
           </li>
         </ul>

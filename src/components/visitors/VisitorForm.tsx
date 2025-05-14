@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import { User, Phone, Mail, MessageSquare, UserCheck, CalendarClock, Shield } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { addVisitor } from '../../services/visitorService';
-import { getCurrentFormattedDate } from '../../utils/dateUtils';
+import { Shield } from 'lucide-react';
 import api from '../../services/api';
 
 interface VisitorFormData {
@@ -11,18 +8,31 @@ interface VisitorFormData {
   email: string;
   purpose: string;
   hostName: string;
+  company: string;
   visitDate: string;
+  modeOfEntry: string;
+}
+
+interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+      error?: string;
+    };
+  };
+  message: string;
 }
 
 const VisitorForm: React.FC = () => {
-  const navigate = useNavigate();
   const [formData, setFormData] = useState<VisitorFormData>({
     fullName: '',
     phoneNumber: '',
     email: '',
     purpose: '',
     hostName: '',
+    company: '',
     visitDate: new Date().toISOString().split('T')[0],
+    modeOfEntry: '',
   });
   
   const [errors, setErrors] = useState<Partial<VisitorFormData>>({});
@@ -38,19 +48,20 @@ const VisitorForm: React.FC = () => {
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     if (!formData.purpose.trim()) newErrors.purpose = 'Purpose is required';
     if (!formData.hostName.trim()) newErrors.hostName = 'Host name is required';
+    if (!formData.company.trim()) newErrors.company = 'Company name is required';
     if (!formData.visitDate) newErrors.visitDate = 'Visit date is required';
-
+    if (!formData.modeOfEntry) newErrors.modeOfEntry = 'Mode of entry is required';
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
   
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name as keyof VisitorFormData]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
-    
     if (apiError) {
       setApiError(null);
     }
@@ -59,13 +70,14 @@ const VisitorForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
-
+    
     setIsSubmitting(true);
     setApiError(null);
     setShowSuccessMessage(false);
 
     try {
       const response = await api.post('/visitors/register', formData);
+      
       if (response.data.success) {
         setExitCode(response.data.data.exitCode);
         setShowSuccessMessage(true);
@@ -75,12 +87,20 @@ const VisitorForm: React.FC = () => {
           email: '',
           purpose: '',
           hostName: '',
+          company: '',
           visitDate: new Date().toISOString().split('T')[0],
+          modeOfEntry: '',
         });
       }
     } catch (error) {
       console.error('Error registering visitor:', error);
-      setApiError(error instanceof Error ? error.message : 'Failed to register visitor. Please try again.');
+      const apiError = error as ApiError;
+      console.log('Error details:', apiError.response?.data);
+      const errorMessage = apiError.response?.data?.message || 
+                          apiError.response?.data?.error || 
+                          apiError.message || 
+                          'Failed to register visitor. Please try again.';
+      setApiError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -93,7 +113,7 @@ const VisitorForm: React.FC = () => {
           <Shield className="w-6 h-6 text-blue-600" />
           <h2 className="text-2xl font-semibold text-gray-900">Register New Visitor</h2>
         </div>
-        
+      
         {showSuccessMessage && (
           <div className="mb-4 p-4 bg-green-50 text-green-700 rounded-md">
             Visitor registered successfully!
@@ -102,13 +122,13 @@ const VisitorForm: React.FC = () => {
             )}
           </div>
         )}
-        
+      
         {apiError && (
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded relative mb-6 animate-slide-in">
             <span className="block sm:inline">{apiError}</span>
           </div>
         )}
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
@@ -128,7 +148,7 @@ const VisitorForm: React.FC = () => {
               <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>
             )}
           </div>
-          
+
           <div>
             <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
               Phone Number
@@ -147,7 +167,7 @@ const VisitorForm: React.FC = () => {
               <p className="mt-1 text-sm text-red-600">{errors.phoneNumber}</p>
             )}
           </div>
-          
+
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email
@@ -166,7 +186,51 @@ const VisitorForm: React.FC = () => {
               <p className="mt-1 text-sm text-red-600">{errors.email}</p>
             )}
           </div>
-          
+
+          <div>
+            <label htmlFor="company" className="block text-sm font-medium text-gray-700">
+              Company
+            </label>
+            <input
+              type="text"
+              id="company"
+              name="company"
+              value={formData.company}
+              onChange={handleChange}
+              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                errors.company ? 'border-red-300' : ''
+              }`}
+            />
+            {errors.company && (
+              <p className="mt-1 text-sm text-red-600">{errors.company}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="modeOfEntry" className="block text-sm font-medium text-gray-700">
+              Mode of Entry
+            </label>
+            <select
+              id="modeOfEntry"
+              name="modeOfEntry"
+              value={formData.modeOfEntry}
+              onChange={handleChange}
+              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                errors.modeOfEntry ? 'border-red-300' : ''
+              }`}
+            >
+              <option value="">Select mode of entry</option>
+              <option value="Walk-in">Walk-in</option>
+              <option value="Van">Van</option>
+              <option value="Lorry">Lorry</option>
+              <option value="Car">Car</option>
+              <option value="Bike">Bike</option>
+            </select>
+            {errors.modeOfEntry && (
+              <p className="mt-1 text-sm text-red-600">{errors.modeOfEntry}</p>
+            )}
+          </div>
+
           <div>
             <label htmlFor="purpose" className="block text-sm font-medium text-gray-700">
               Purpose of Visit
@@ -185,7 +249,7 @@ const VisitorForm: React.FC = () => {
               <p className="mt-1 text-sm text-red-600">{errors.purpose}</p>
             )}
           </div>
-          
+
           <div>
             <label htmlFor="hostName" className="block text-sm font-medium text-gray-700">
               Host Name
@@ -204,7 +268,7 @@ const VisitorForm: React.FC = () => {
               <p className="mt-1 text-sm text-red-600">{errors.hostName}</p>
             )}
           </div>
-          
+
           <div>
             <label htmlFor="visitDate" className="block text-sm font-medium text-gray-700">
               Visit Date
@@ -223,16 +287,14 @@ const VisitorForm: React.FC = () => {
               <p className="mt-1 text-sm text-red-600">{errors.visitDate}</p>
             )}
           </div>
-          
-          <div className="pt-4">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-            >
-              {isSubmitting ? 'Registering...' : 'Register Visitor'}
-            </button>
-          </div>
+
+          <button
+            type="submit"
+            className="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Registering...' : 'Register Visitor'}
+          </button>
         </form>
       </div>
     </div>

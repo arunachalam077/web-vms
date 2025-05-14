@@ -1,17 +1,52 @@
 const Visitor = require('../models/Visitor');
+const { generateExitCode } = require('../utils/exitCodeGenerator');
 
 // Register a new visitor
 exports.registerVisitor = async (req, res) => {
   try {
-    const visitor = new Visitor(req.body);
+    const {
+      fullName,
+      phoneNumber,
+      email,
+      purpose,
+      hostName,
+      company,
+      visitDate,
+      modeOfEntry
+    } = req.body;
+
+    // Generate a unique exit code
+    const exitCode = generateExitCode();
+
+    const visitor = new Visitor({
+      fullName,
+      phoneNumber,
+      email,
+      purpose,
+      hostName,
+      company,
+      visitDate: new Date(visitDate),
+      modeOfEntry,
+      exitCode,
+      checkInTime: new Date(),
+      status: 'checked-in'
+    });
+
     await visitor.save();
+
     res.status(201).json({
       success: true,
-      data: visitor
+      data: {
+        visitor,
+        exitCode
+      },
+      message: 'Visitor registered successfully'
     });
   } catch (error) {
+    console.error('Error registering visitor:', error);
     res.status(400).json({
       success: false,
+      message: 'Error registering visitor',
       error: error.message
     });
   }
@@ -29,7 +64,8 @@ exports.getAllVisitors = async (req, res) => {
       query.$or = [
         { fullName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
-        { phoneNumber: { $regex: search, $options: 'i' } }
+        { phoneNumber: { $regex: search, $options: 'i' } },
+        { company: { $regex: search, $options: 'i' } }
       ];
     }
     
