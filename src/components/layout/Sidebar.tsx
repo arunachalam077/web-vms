@@ -1,7 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, UserPlus, Clock, Settings, HelpCircle, QrCode, Scan } from 'lucide-react';
-import PreRegistrationForm from '../visitors/PreRegistrationForm';
+import { LayoutDashboard, Users, UserPlus, Settings, HelpCircle, QrCode, Scan } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;

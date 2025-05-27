@@ -37,45 +37,75 @@ export const getAllVisitors = async (page: number = 1, limit: number = 10): Prom
   }
 };
 
+export interface Visitor {
+  _id: string;
+  fullName: string;
+  phoneNumber: string;
+  email: string;
+  purpose: string;
+  hostName: string;
+  company: string;
+  vehicleNumber: string;
+  modeOfEntry: string;
+  checkInTime: string;
+  checkOutTime: string | null;
+  status: 'checked-in' | 'checked-out';
+  visitDate: string;
+  exitCode: string;
+}
+
+export interface VisitorFormData {
+  fullName: string;
+  phoneNumber: string;
+  email: string;
+  purpose: string;
+  hostName: string;
+  company: string;
+  vehicleNumber: string;
+  modeOfEntry: string;
+  visitDate: string;
+}
+
+export interface VisitorsResponse {
+  data: Visitor[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
 // Add a new visitor
-export const addVisitor = async (visitorData: Omit<Visitor, 'id' | 'checkInTime' | 'checkOutTime' | 'status'>): Promise<Visitor> => {
-  try {
-    console.log('Adding new visitor:', visitorData);
-    const response = await api.post('/visitors', visitorData);
-    
-    console.log('Visitor added successfully:', response.data);
-    return response.data.data || response.data;
-  } catch (error) {
-    console.error('Error in addVisitor:', error);
-    throw error;
-  }
+export const addVisitor = async (visitorData: VisitorFormData): Promise<Visitor> => {
+  const response = await api.post<{ success: boolean; data: Visitor }>('/visitors/register', visitorData);
+  return response.data.data;
 };
 
 // Check out a visitor
-export const checkOutVisitor = async (visitorId: string): Promise<Visitor> => {
+export const checkOutVisitor = async (exitCode: string): Promise<Visitor> => {
   try {
-    console.log(`Checking out visitor with ID: ${visitorId}`);
-    const response = await api.put(`/visitors/${visitorId}/checkout`);
+    console.log('Checking out visitor with exit code:', exitCode);
+    const response = await api.post<{ success: boolean; data: Visitor; message: string }>('/visitors/checkout', { exitCode });
+    console.log('Checkout response:', response.data);
     
-    console.log('Visitor checked out successfully:', response.data);
-    return response.data.data || response.data;
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Failed to check out visitor');
+    }
+    
+    return response.data.data;
   } catch (error) {
-    console.error('Error checking out visitor:', error);
+    console.error('Error in checkOutVisitor:', error);
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
     throw error;
   }
 };
 
 // Delete a visitor
-export const deleteVisitor = async (visitorId: string): Promise<void> => {
-  try {
-    console.log(`Deleting visitor with ID: ${visitorId}`);
-    await api.delete(`/visitors/${visitorId}`);
-    
-    console.log('Visitor deleted successfully');
-  } catch (error) {
-    console.error('Error deleting visitor:', error);
-    throw error;
-  }
+export const deleteVisitor = async (id: string): Promise<void> => {
+  await api.delete(`/visitors/${id}`);
 };
 
 // Filter visitors (client-side, after fetching all)
@@ -194,4 +224,21 @@ export const getVisitorStats = async (): Promise<DashboardStats> => {
       todayVisitors: 0
     };
   }
+};
+
+export const getVisitors = async (page: number = 1, limit: number = 10): Promise<VisitorsResponse> => {
+  const response = await api.get<VisitorsResponse>(`/visitors?page=${page}&limit=${limit}`);
+  return response.data;
+};
+
+export const getVisitorById = async (id: string): Promise<Visitor> => {
+  const response = await api.get<Visitor>(`/visitors/${id}`);
+  return response.data;
+};
+
+export const exportVisitors = async (): Promise<Blob> => {
+  const response = await api.get('/visitors/export', {
+    responseType: 'blob'
+  });
+  return response.data;
 };

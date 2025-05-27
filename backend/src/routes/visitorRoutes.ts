@@ -5,6 +5,7 @@ import {
   getVisitorById,
   checkOutVisitor,
   deleteVisitor,
+  exportVisitors
 } from '../controllers/visitorController';
 import { protect } from '../middleware/auth';
 
@@ -17,6 +18,7 @@ router.post('/checkout', checkOutVisitor);
 // Protected routes (authentication required)
 router.use(protect);
 router.get('/', getVisitors);
+router.get('/export', exportVisitors);
 router.get('/:id', getVisitorById);
 router.delete('/:id', deleteVisitor);
 

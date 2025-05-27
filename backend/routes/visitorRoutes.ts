@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerVisitor, checkoutVisitor } from '../controllers/visitorController';
+import { registerVisitor, checkoutVisitor, getVisitors } from '../controllers/visitorController';
 
 const router = express.Router();
 
@@ -8,5 +8,8 @@ router.post('/register', registerVisitor);
 
 // Checkout a visitor
 router.post('/checkout', checkoutVisitor);
+
+// Get all visitors
+router.get('/', getVisitors);
 
 export default router; 

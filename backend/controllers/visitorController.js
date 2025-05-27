@@ -11,8 +11,9 @@ exports.registerVisitor = async (req, res) => {
       purpose,
       hostName,
       company,
-      visitDate,
-      modeOfEntry
+      vehicleNumber,
+      modeOfEntry,
+      visitDate
     } = req.body;
 
     // Generate a unique exit code
@@ -25,8 +26,9 @@ exports.registerVisitor = async (req, res) => {
       purpose,
       hostName,
       company,
-      visitDate: new Date(visitDate),
+      vehicleNumber,
       modeOfEntry,
+      visitDate,
       exitCode,
       checkInTime: new Date(),
       status: 'checked-in'

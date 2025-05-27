@@ -3,6 +3,9 @@ import { Visitor } from '../../types';
 import { ArrowUp, ArrowDown, MoreVertical, UserMinus, Trash, CheckCircle, XCircle } from 'lucide-react';
 import { formatDate, formatTime } from '../../utils/dateUtils';
 import { checkOutVisitor, deleteVisitor } from '../../services/visitorService';
+import { format } from 'date-fns';
+import Button from '../ui/button';
+import { toast } from 'react-hot-toast';
 
 interface VisitorListProps {
   visitors: Visitor[];
@@ -21,6 +24,8 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
   const [loading, setLoading] = useState<LoadingState>({});
   const [error, setError] = useState<string | null>(null);
   const [debugMode, setDebugMode] = useState(true); // Set to true for debugging
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   
   // Debug function to inspect the visitor data structure
   useEffect(() => {
@@ -103,22 +108,22 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
     setActiveDropdown(activeDropdown === visitorId ? null : visitorId);
   };
   
-  const handleCheckOut = async (visitor: Visitor) => {
-    const visitorId = visitor._id || visitor.id;
-    if (!visitorId) {
-      setError('Visitor ID not found');
+  const handleCheckOut = async (exitCode: string) => {
+    if (!exitCode) {
+      toast.error('Exit code is required');
       return;
     }
-
-    setLoading(prev => ({ ...prev, [visitorId]: true }));
     try {
-      await checkOutVisitor(visitorId);
+      console.log('Attempting to check out visitor with exit code:', exitCode);
+      const updatedVisitor = await checkOutVisitor(exitCode);
+      console.log('Visitor checked out successfully:', updatedVisitor);
+      
+      // Update the visitor in the list
       onVisitorUpdate();
-    } catch (error) {
-      console.error('Error checking out visitor:', error);
-      setError('Failed to check out visitor');
-    } finally {
-      setLoading(prev => ({ ...prev, [visitorId]: false }));
+      toast.success('Visitor checked out successfully');
+    } catch (err) {
+      console.error('Error checking out visitor:', err);
+      toast.error('Failed to check out visitor');
     }
   };
   
@@ -270,6 +275,12 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
                   )}
                 </div>
               </th>
+              <th 
+                scope="col" 
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+              >
+                Vehicle Number
+              </th>
               {showActions && (
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -317,6 +328,9 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
                       {visitor.status === 'checked-in' ? 'Checked In' : 'Checked Out'}
                     </span>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {visitor.vehicleNumber}
+                  </td>
                   {showActions && (
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
                       {loading[visitorId || `visitor-${index}`] ? (
@@ -335,7 +349,7 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
                               <div className="py-1" role="menu" aria-orientation="vertical">
                                 {visitor.status === 'checked-in' && (
                                   <button
-                                    onClick={() => handleCheckOut(visitor)}
+                                    onClick={() => handleCheckOut(visitor.exitCode)}
                                     className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                                     role="menuitem"
                                   >
@@ -363,6 +377,24 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
             })}
           </tbody>
         </table>
+      </div>
+
+      <div className="mt-4 flex justify-center gap-2">
+        <Button
+          onClick={() => setPage(p => Math.max(1, p - 1))}
+          disabled={page === 1}
+        >
+          Previous
+        </Button>
+        <span className="py-2 px-4">
+          Page {page} of {totalPages}
+        </span>
+        <Button
+          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+          disabled={page === totalPages}
+        >
+          Next
+        </Button>
       </div>
     </div>
   );

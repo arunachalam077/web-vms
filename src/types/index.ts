@@ -7,10 +7,14 @@ export interface Visitor {
   email: string;
   purpose: string;
   hostName: string;
+  company: string;
+  vehicleNumber: string;
+  modeOfEntry: string;
   checkInTime: string | null;
   checkOutTime: string | null;
   status: 'checked-in' | 'checked-out';
   visitDate: string;
+  exitCode: string;
 }
 
 export interface DateRange {

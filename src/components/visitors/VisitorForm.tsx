@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// components/VisitorForm.tsx
+import React, { useState, useRef } from 'react';
 import { Shield } from 'lucide-react';
 import api from '../../services/api';
 
@@ -9,8 +10,23 @@ interface VisitorFormData {
   purpose: string;
   hostName: string;
   company: string;
-  visitDate: string;
+  vehicleNumber: string;
   modeOfEntry: string;
+  visitDate: string;
+}
+
+interface VisitorData {
+  fullName: string;
+  phoneNumber: string;
+  email: string;
+  purpose: string;
+  hostName: string;
+  company: string;
+  vehicleNumber: string;
+  modeOfEntry: string;
+  visitDate: string;
+  checkInTime: string;
+  exitCode: string;
 }
 
 interface ApiError {
@@ -31,8 +47,9 @@ const VisitorForm: React.FC = () => {
     purpose: '',
     hostName: '',
     company: '',
-    visitDate: new Date().toISOString().split('T')[0],
+    vehicleNumber: '',
     modeOfEntry: '',
+    visitDate: new Date().toISOString().split('T')[0],
   });
   
   const [errors, setErrors] = useState<Partial<VisitorFormData>>({});
@@ -40,6 +57,9 @@ const VisitorForm: React.FC = () => {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [exitCode, setExitCode] = useState<string>('');
+  const [printData, setPrintData] = useState<VisitorData | null>(null);
+  
+  const printRef = useRef<HTMLDivElement>(null);
   
   const validateForm = () => {
     const newErrors: Partial<VisitorFormData> = {};
@@ -49,8 +69,9 @@ const VisitorForm: React.FC = () => {
     if (!formData.purpose.trim()) newErrors.purpose = 'Purpose is required';
     if (!formData.hostName.trim()) newErrors.hostName = 'Host name is required';
     if (!formData.company.trim()) newErrors.company = 'Company name is required';
-    if (!formData.visitDate) newErrors.visitDate = 'Visit date is required';
+    if (!formData.vehicleNumber.trim()) newErrors.vehicleNumber = 'Vehicle number is required';
     if (!formData.modeOfEntry) newErrors.modeOfEntry = 'Mode of entry is required';
+    if (!formData.visitDate) newErrors.visitDate = 'Visit date is required';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -69,18 +90,36 @@ const VisitorForm: React.FC = () => {
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    
+    console.log("Form data before validation:", formData);
+    
+    if (!validateForm()) {
+      console.log("Form validation failed:", errors);
+      return;
+    }
     
     setIsSubmitting(true);
     setApiError(null);
     setShowSuccessMessage(false);
 
     try {
-      const response = await api.post('/visitors/register', formData);
+      // Ensure all required fields are present
+      const visitorData = {
+        ...formData,
+        company: formData.company || '',
+        vehicleNumber: formData.vehicleNumber || '',
+        modeOfEntry: formData.modeOfEntry || ''
+      };
+
+      console.log("Sending data to API:", visitorData);
+      
+      const response = await api.post('/visitors/register', visitorData);
+      console.log("API response:", response);
       
       if (response.data.success) {
         setExitCode(response.data.data.exitCode);
         setShowSuccessMessage(true);
+        setPrintData(response.data.data);
         setFormData({
           fullName: '',
           phoneNumber: '',
@@ -88,8 +127,9 @@ const VisitorForm: React.FC = () => {
           purpose: '',
           hostName: '',
           company: '',
-          visitDate: new Date().toISOString().split('T')[0],
+          vehicleNumber: '',
           modeOfEntry: '',
+          visitDate: new Date().toISOString().split('T')[0],
         });
       }
     } catch (error) {
@@ -106,6 +146,111 @@ const VisitorForm: React.FC = () => {
     }
   };
   
+  const handlePrint = () => {
+    if (printRef.current) {
+      const printWindow = window.open('', '_blank', 'width=400,height=300');
+      if (!printWindow) {
+        alert("Please allow pop-ups to print the visitor pass");
+        return;
+      }
+
+      const printContent = `
+        <html>
+          <head>
+            <title>Visitor Pass</title>
+            <style>
+              @media print {
+                @page {
+                  size: 80mm auto;
+                  margin: 0;
+                }
+                body {
+                  width: 80mm;
+                  margin: 0;
+                  padding: 0;
+                }
+              }
+              body {
+                font-family: Arial, sans-serif;
+                width: 80mm;
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              .ticket-container {
+                width: 100%;
+                padding: 0 0 0 0;
+                box-sizing: border-box;
+              }
+              .header {
+                text-align: center;
+                font-weight: bold;
+                font-size: 22px;
+                margin-top: 8px;
+                margin-bottom: 12px;
+                letter-spacing: 1px;
+              }
+              .grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                row-gap: 8px;
+                column-gap: 12px;
+                font-size: 15px;
+                margin-bottom: 16px;
+              }
+              .label {
+                font-weight: bold;
+                text-align: left;
+              }
+              .value {
+                text-align: left;
+              }
+              .disclaimer {
+                font-size: 10px;
+                margin-top: 18px;
+                border-top: 1px solid #eee;
+                padding-top: 6px;
+                line-height: 1.3;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="ticket-container">
+              <div class="header">PARKWOOD</div>
+              <div class="grid">
+                <div class="label">Name</div>
+                <div class="value">${printData?.fullName || ''}</div>
+                <div class="label">Date</div>
+                <div class="value">${printData?.visitDate ? new Date(printData.visitDate).toLocaleDateString() : ''}</div>
+                <div class="label">Time</div>
+                <div class="value">${printData?.checkInTime ? new Date(printData.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+                <div class="label">Mobile no</div>
+                <div class="value">${printData?.phoneNumber ? printData.phoneNumber.replace(/(\d{2})\d{4}(\d{2})/, '$1****$2') : ''}</div>
+                <div class="label">Exit Code</div>
+                <div class="value">${exitCode}</div>
+              </div>
+              <div class="disclaimer">
+                <b>Disclaimer Notice:</b> The management is not responsible for any theft, damage, or other misdemeanor howsoever caused to vehicles and their equipment contents therein parked in the basement in a manner that does not disrupt the flow of traffic.
+              </div>
+            </div>
+            <script>
+              window.onload = function() {
+                window.print();
+                setTimeout(function() {
+                  window.close();
+                }, 1000);
+              };
+            </script>
+          </body>
+        </html>
+      `;
+
+      printWindow.document.open();
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+    }
+  };
+  
   return (
     <div className="max-w-2xl mx-auto p-6">
       <div className="bg-white rounded-lg shadow-md p-6">
@@ -114,11 +259,32 @@ const VisitorForm: React.FC = () => {
           <h2 className="text-2xl font-semibold text-gray-900">Register New Visitor</h2>
         </div>
       
-        {showSuccessMessage && (
+        {showSuccessMessage && printData && (
           <div className="mb-4 p-4 bg-green-50 text-green-700 rounded-md">
             Visitor registered successfully!
             {exitCode && (
-              <p className="mt-2 font-semibold">Exit Code: {exitCode}</p>
+              <>
+                <p className="mt-2 font-semibold">Exit Code: {exitCode}</p>
+                <div ref={printRef} className="hidden">
+                  <div className="header">PARKWOOD</div>
+                  <div className="grid">
+                    <div className="label">Name</div>
+                    <div className="value">{printData?.fullName || ''}</div>
+                    <div className="label">Date</div>
+                    <div className="value">{printData?.visitDate ? new Date(printData.visitDate).toLocaleDateString() : ''}</div>
+                    <div className="label">Time</div>
+                    <div className="value">{printData?.checkInTime ? new Date(printData.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</div>
+                    <div className="label">Mobile no</div>
+                    <div className="value">{printData?.phoneNumber ? printData.phoneNumber.replace(/(\d{2})\d{4}(\d{2})/, '$1****$2') : ''}</div>
+                    <div className="label">Exit Code</div>
+                    <div className="value">{exitCode}</div>
+                  </div>
+                  <div className="disclaimer">
+                    <b>Disclaimer Notice:</b> The management is not responsible for any theft, damage, or other misdemeanor howsoever caused to vehicles and their equipment contents therein parked in the basement in a manner that does not disrupt the flow of traffic.
+                  </div>
+                </div>
+                <button onClick={handlePrint} className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Print</button>
+              </>
             )}
           </div>
         )}
@@ -188,50 +354,6 @@ const VisitorForm: React.FC = () => {
           </div>
 
           <div>
-            <label htmlFor="company" className="block text-sm font-medium text-gray-700">
-              Company
-            </label>
-            <input
-              type="text"
-              id="company"
-              name="company"
-              value={formData.company}
-              onChange={handleChange}
-              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                errors.company ? 'border-red-300' : ''
-              }`}
-            />
-            {errors.company && (
-              <p className="mt-1 text-sm text-red-600">{errors.company}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="modeOfEntry" className="block text-sm font-medium text-gray-700">
-              Mode of Entry
-            </label>
-            <select
-              id="modeOfEntry"
-              name="modeOfEntry"
-              value={formData.modeOfEntry}
-              onChange={handleChange}
-              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
-                errors.modeOfEntry ? 'border-red-300' : ''
-              }`}
-            >
-              <option value="">Select mode of entry</option>
-              <option value="Walk-in">Walk-in</option>
-              <option value="Van">Van</option>
-              <option value="Lorry">Lorry</option>
-              <option value="Car">Car</option>
-              <option value="Bike">Bike</option>
-            </select>
-            {errors.modeOfEntry && (
-              <p className="mt-1 text-sm text-red-600">{errors.modeOfEntry}</p>
-            )}
-          </div>
-
-          <div>
             <label htmlFor="purpose" className="block text-sm font-medium text-gray-700">
               Purpose of Visit
             </label>
@@ -266,6 +388,69 @@ const VisitorForm: React.FC = () => {
             />
             {errors.hostName && (
               <p className="mt-1 text-sm text-red-600">{errors.hostName}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="company" className="block text-sm font-medium text-gray-700">
+              Company
+            </label>
+            <input
+              type="text"
+              id="company"
+              name="company"
+              value={formData.company}
+              onChange={handleChange}
+              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                errors.company ? 'border-red-300' : ''
+              }`}
+            />
+            {errors.company && (
+              <p className="mt-1 text-sm text-red-600">{errors.company}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="vehicleNumber" className="block text-sm font-medium text-gray-700">
+              Vehicle Number
+            </label>
+            <input
+              type="text"
+              id="vehicleNumber"
+              name="vehicleNumber"
+              value={formData.vehicleNumber}
+              onChange={handleChange}
+              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                errors.vehicleNumber ? 'border-red-300' : ''
+              }`}
+            />
+            {errors.vehicleNumber && (
+              <p className="mt-1 text-sm text-red-600">{errors.vehicleNumber}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="modeOfEntry" className="block text-sm font-medium text-gray-700">
+              Mode of Entry
+            </label>
+            <select
+              id="modeOfEntry"
+              name="modeOfEntry"
+              value={formData.modeOfEntry}
+              onChange={handleChange}
+              className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                errors.modeOfEntry ? 'border-red-300' : ''
+              }`}
+            >
+              <option value="">Select mode of entry</option>
+              <option value="Walk-in">Walk-in</option>
+              <option value="Van">Van</option>
+              <option value="Lorry">Lorry</option>
+              <option value="Car">Car</option>
+              <option value="Bike">Bike</option>
+            </select>
+            {errors.modeOfEntry && (
+              <p className="mt-1 text-sm text-red-600">{errors.modeOfEntry}</p>
             )}
           </div>
 

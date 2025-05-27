@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import Visitor, { IVisitor } from '../models/Visitor';
+import Visitor from '../models/Visitor';
 
 // Generate a unique exit code with timestamp
 const generateExitCode = (): string => {
@@ -12,33 +12,89 @@ const generateExitCode = (): string => {
 
 export const registerVisitor = async (req: Request, res: Response) => {
   try {
-    const { name, phoneNumber, purpose, visitingWhom, guardName, guardId } = req.body;
+    console.log('Raw request body:', req.body);
+    
+    const {
+      fullName,
+      phoneNumber,
+      email,
+      purpose,
+      hostName,
+      company,
+      vehicleNumber,
+      modeOfEntry,
+      visitDate
+    } = req.body;
+
+    // Log the received data
+    console.log('Received visitor data:', {
+      fullName,
+      phoneNumber,
+      email,
+      purpose,
+      hostName,
+      company,
+      vehicleNumber,
+      modeOfEntry,
+      visitDate
+    });
+    
+    // Validate required fields
+    if (!company || !vehicleNumber || !modeOfEntry) {
+      console.log('Missing required fields:', { company, vehicleNumber, modeOfEntry });
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: company, vehicleNumber, or modeOfEntry',
+        receivedData: req.body
+      });
+    }
     
     const exitCode = generateExitCode();
+    console.log('Generated exit code:', exitCode);
     
     const visitor = new Visitor({
-      name,
+      fullName,
       phoneNumber,
+      email,
       purpose,
-      visitingWhom,
-      guardName,
-      guardId,
-      exitCode,
-      checkedOut: false
+      hostName,
+      company,
+      vehicleNumber,
+      modeOfEntry,
+      visitDate: new Date(visitDate),
+      checkInTime: new Date(),
+      status: 'checked-in',
+      exitCode
     });
 
-    await visitor.save();
-    
-    res.status(201).json({
-      success: true,
-      data: visitor,
-      message: 'Visitor registered successfully'
-    });
+    // Log the visitor object before saving
+    console.log('Visitor object before save:', JSON.stringify(visitor, null, 2));
+
+    try {
+      const savedVisitor = await visitor.save();
+      console.log('Saved visitor:', JSON.stringify(savedVisitor, null, 2));
+      
+      res.status(201).json({
+        success: true,
+        data: savedVisitor,
+        message: 'Visitor registered successfully'
+      });
+    } catch (saveError) {
+      console.error('Error saving visitor:', saveError);
+      res.status(500).json({
+        success: false,
+        message: 'Error saving visitor to database',
+        error: saveError.message,
+        validationErrors: saveError.errors
+      });
+    }
   } catch (error) {
+    console.error('Error in registerVisitor:', error);
     res.status(500).json({
       success: false,
       message: 'Error registering visitor',
-      error: error.message
+      error: error.message,
+      receivedData: req.body
     });
   }
 };
@@ -56,15 +112,15 @@ export const checkoutVisitor = async (req: Request, res: Response) => {
       });
     }
 
-    if (visitor.checkedOut) {
+    if (visitor.status === 'checked-out') {
       return res.status(400).json({
         success: false,
         message: 'Visitor has already checked out'
       });
     }
 
-    visitor.checkedOut = true;
-    visitor.exitTime = new Date();
+    visitor.status = 'checked-out';
+    visitor.checkOutTime = new Date();
     await visitor.save();
 
     res.status(200).json({
@@ -76,6 +132,22 @@ export const checkoutVisitor = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: 'Error during checkout',
+      error: error.message
+    });
+  }
+};
+
+export const getVisitors = async (req: Request, res: Response) => {
+  try {
+    const visitors = await Visitor.find().sort({ checkInTime: -1 });
+    res.status(200).json({
+      success: true,
+      data: visitors
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching visitors',
       error: error.message
     });
   }
