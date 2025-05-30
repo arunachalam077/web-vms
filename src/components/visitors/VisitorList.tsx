@@ -128,7 +128,7 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
   };
   
   const handleDelete = async (visitor: Visitor) => {
-    const visitorId = visitor._id || visitor.id;
+    const visitorId = getVisitorId(visitor) || `visitor-${index}`;
     if (!visitorId) {
       setError('Visitor ID not found');
       return;
@@ -156,8 +156,68 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
     );
   }
   
+  // MOBILE CARD VIEW
+  const MobileVisitorCard = ({ visitor, localId, index }: { visitor: Visitor, localId: string, index: number }) => (
+    <div className="block md:hidden bg-white rounded-lg shadow-sm mb-4 p-4 relative">
+      <div className="flex items-center justify-between mb-2">
+        <div className="font-semibold text-gray-900 text-base">{visitor.fullName}</div>
+        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+          visitor.status === 'checked-in' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+        }`}>
+          {visitor.status === 'checked-in' ? 'Checked In' : 'Checked Out'}
+        </span>
+      </div>
+      <div className="text-xs text-gray-500 mb-1">{visitor.email} | {visitor.phoneNumber}</div>
+      <div className="text-xs text-gray-500 mb-1">Host: <span className="font-medium text-gray-700">{visitor.hostName}</span></div>
+      <div className="text-xs text-gray-500 mb-1">Purpose: <span className="font-medium text-gray-700">{visitor.purpose}</span></div>
+      <div className="text-xs text-gray-500 mb-1">Visit Date: {formatDate(visitor.visitDate)}</div>
+      <div className="text-xs text-gray-500 mb-1">Check In: {formatTime(visitor.checkInTime)}</div>
+      <div className="text-xs text-gray-500 mb-1">Vehicle: {visitor.vehicleNumber}</div>
+      {showActions && (
+        <div className="flex justify-end mt-2">
+          {loading[localId] ? (
+            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-500 mx-auto"></div>
+          ) : (
+            <>
+              <button
+                onClick={() => toggleDropdown(localId)}
+                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+              >
+                <MoreVertical size={18} />
+              </button>
+              {(activeDropdown === localId) && (
+                <div className="absolute right-4 top-10 w-48 bg-white rounded-md shadow-lg z-10 animate-fade-in">
+                  <div className="py-1" role="menu" aria-orientation="vertical">
+                    {visitor.status === 'checked-in' && (
+                      <button
+                        onClick={() => handleCheckOut(visitor.exitCode)}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                        role="menuitem"
+                      >
+                        <UserMinus size={16} className="mr-2" />
+                        Check Out
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDelete(visitor)}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center"
+                      role="menuitem"
+                    >
+                      <Trash size={16} className="mr-2" />
+                      Delete Record
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden animate-fade-in">
+    <div className="animate-fade-in">
       {error && (
         <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
           <div className="flex">
@@ -178,224 +238,208 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
           </div>
         </div>
       )}
-      
-      {debugMode && (
-        <div className="p-3 bg-yellow-50 text-yellow-800 text-xs border-b border-yellow-100">
-          <div className="font-bold mb-1">Debug Info:</div>
-          <div>Total visitors: {visitors.length}</div>
-          <div>First visitor ID: {visitors.length > 0 ? getVisitorId(visitors[0]) || 'None' : 'N/A'}</div>
-          <button 
-            onClick={() => setDebugMode(false)}
-            className="mt-1 text-xs text-blue-600 underline hover:text-blue-800"
-          >
-            Hide Debug Info
-          </button>
-        </div>
-      )}
-      
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th 
-                scope="col" 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                onClick={() => handleSort('fullName')}
-              >
-                <div className="flex items-center">
-                  Visitor
-                  {sortField === 'fullName' && (
-                    sortDirection === 'asc' ? <ArrowUp size={16} className="ml-1" /> : <ArrowDown size={16} className="ml-1" />
-                  )}
-                </div>
-              </th>
-              <th 
-                scope="col" 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Contact
-              </th>
-              <th 
-                scope="col" 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                onClick={() => handleSort('hostName')}
-              >
-                <div className="flex items-center">
-                  Host
-                  {sortField === 'hostName' && (
-                    sortDirection === 'asc' ? <ArrowUp size={16} className="ml-1" /> : <ArrowDown size={16} className="ml-1" />
-                  )}
-                </div>
-              </th>
-              <th 
-                scope="col" 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                onClick={() => handleSort('purpose')}
-              >
-                <div className="flex items-center">
-                  Purpose
-                  {sortField === 'purpose' && (
-                    sortDirection === 'asc' ? <ArrowUp size={16} className="ml-1" /> : <ArrowDown size={16} className="ml-1" />
-                  )}
-                </div>
-              </th>
-              <th 
-                scope="col" 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                onClick={() => handleSort('visitDate')}
-              >
-                <div className="flex items-center">
-                  Visit Date
-                  {sortField === 'visitDate' && (
-                    sortDirection === 'asc' ? <ArrowUp size={16} className="ml-1" /> : <ArrowDown size={16} className="ml-1" />
-                  )}
-                </div>
-              </th>
-              <th 
-                scope="col" 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                onClick={() => handleSort('checkInTime')}
-              >
-                <div className="flex items-center">
-                  Check In
-                  {sortField === 'checkInTime' && (
-                    sortDirection === 'asc' ? <ArrowUp size={16} className="ml-1" /> : <ArrowDown size={16} className="ml-1" />
-                  )}
-                </div>
-              </th>
-              <th 
-                scope="col" 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                onClick={() => handleSort('status')}
-              >
-                <div className="flex items-center">
-                  Status
-                  {sortField === 'status' && (
-                    sortDirection === 'asc' ? <ArrowUp size={16} className="ml-1" /> : <ArrowDown size={16} className="ml-1" />
-                  )}
-                </div>
-              </th>
-              <th 
-                scope="col" 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-              >
-                Vehicle Number
-              </th>
-              {showActions && (
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {sortedVisitors.map((visitor, index) => {
-              const visitorId = getVisitorId(visitor);
-              return (
-                <tr key={visitorId || index} className="hover:bg-gray-50 transition-colors duration-150">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{visitor.fullName}</div>
-                    {debugMode && (
-                      <div className="text-xs text-gray-500">
-                        ID: {visitorId || 'missing'}
-                      </div>
+      {/* Mobile Card List */}
+      <div className="md:hidden">
+        {sortedVisitors.map((visitor, index) => {
+          const localId = getVisitorId(visitor) || `visitor-${index}`;
+          return (
+            <MobileVisitorCard
+              key={localId}
+              visitor={visitor}
+              localId={localId}
+              index={index}
+            />
+          );
+        })}
+      </div>
+      {/* Desktop Table */}
+      <div className="hidden md:block bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort('fullName')}
+                >
+                  <div className="flex items-center">
+                    Visitor
+                    {sortField === 'fullName' && (
+                      sortDirection === 'asc' ? <ArrowUp size={16} className="ml-1" /> : <ArrowDown size={16} className="ml-1" />
                     )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{visitor.email}</div>
-                    <div className="text-sm text-gray-500">{visitor.phoneNumber}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{visitor.hostName}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                      {visitor.purpose}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(visitor.visitDate)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatTime(visitor.checkInTime)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      visitor.status === 'checked-in' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {visitor.status === 'checked-in' ? 'Checked In' : 'Checked Out'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {visitor.vehicleNumber}
-                  </td>
-                  {showActions && (
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
-                      {loading[visitorId || `visitor-${index}`] ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-500 mx-auto"></div>
-                      ) : (
-                        <>
-                          <button 
-                            onClick={() => toggleDropdown(visitorId || `visitor-${index}`)}
-                            className="text-gray-400 hover:text-gray-500 focus:outline-none"
-                          >
-                            <MoreVertical size={18} />
-                          </button>
-                          
-                          {activeDropdown === (visitorId || `visitor-${index}`) && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 animate-fade-in">
-                              <div className="py-1" role="menu" aria-orientation="vertical">
-                                {visitor.status === 'checked-in' && (
-                                  <button
-                                    onClick={() => handleCheckOut(visitor.exitCode)}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                                    role="menuitem"
-                                  >
-                                    <UserMinus size={16} className="mr-2" />
-                                    Check Out
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => handleDelete(visitor)}
-                                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center"
-                                  role="menuitem"
-                                >
-                                  <Trash size={16} className="mr-2" />
-                                  Delete Record
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </>
+                  </div>
+                </th>
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Contact
+                </th>
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort('hostName')}
+                >
+                  <div className="flex items-center">
+                    Host
+                    {sortField === 'hostName' && (
+                      sortDirection === 'asc' ? <ArrowUp size={16} className="ml-1" /> : <ArrowDown size={16} className="ml-1" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort('purpose')}
+                >
+                  <div className="flex items-center">
+                    Purpose
+                    {sortField === 'purpose' && (
+                      sortDirection === 'asc' ? <ArrowUp size={16} className="ml-1" /> : <ArrowDown size={16} className="ml-1" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort('visitDate')}
+                >
+                  <div className="flex items-center">
+                    Visit Date
+                    {sortField === 'visitDate' && (
+                      sortDirection === 'asc' ? <ArrowUp size={16} className="ml-1" /> : <ArrowDown size={16} className="ml-1" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort('checkInTime')}
+                >
+                  <div className="flex items-center">
+                    Check In
+                    {sortField === 'checkInTime' && (
+                      sortDirection === 'asc' ? <ArrowUp size={16} className="ml-1" /> : <ArrowDown size={16} className="ml-1" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                  onClick={() => handleSort('status')}
+                >
+                  <div className="flex items-center">
+                    Status
+                    {sortField === 'status' && (
+                      sortDirection === 'asc' ? <ArrowUp size={16} className="ml-1" /> : <ArrowDown size={16} className="ml-1" />
+                    )}
+                  </div>
+                </th>
+                <th 
+                  scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Vehicle Number
+                </th>
+                {showActions && (
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {sortedVisitors.map((visitor, index) => {
+                const visitorId = getVisitorId(visitor) || `visitor-${index}`;
+                return (
+                  <tr key={visitorId} className="hover:bg-gray-50 transition-colors duration-150">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{visitor.fullName}</div>
+                      {debugMode && (
+                        <div className="text-xs text-gray-500">
+                          ID: {visitorId || 'missing'}
+                        </div>
                       )}
                     </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{visitor.email}</div>
+                      <div className="text-sm text-gray-500">{visitor.phoneNumber}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{visitor.hostName}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                        {visitor.purpose}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(visitor.visitDate)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatTime(visitor.checkInTime)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        visitor.status === 'checked-in' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {visitor.status === 'checked-in' ? 'Checked In' : 'Checked Out'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {visitor.vehicleNumber}
+                    </td>
+                    {showActions && (
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
+                        {loading[visitorId] ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary-500 mx-auto"></div>
+                        ) : (
+                          <>
+                            <button 
+                              onClick={() => toggleDropdown(visitorId)}
+                              className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                            >
+                              <MoreVertical size={18} />
+                            </button>
+                            {activeDropdown === visitorId && (
+                              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 animate-fade-in">
+                                <div className="py-1" role="menu" aria-orientation="vertical">
+                                  {visitor.status === 'checked-in' && (
+                                    <button
+                                      onClick={() => handleCheckOut(visitor.exitCode)}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                                      role="menuitem"
+                                    >
+                                      <UserMinus size={16} className="mr-2" />
+                                      Check Out
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleDelete(visitor)}
+                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center"
+                                    role="menuitem"
+                                  >
+                                    <Trash size={16} className="mr-2" />
+                                    Delete Record
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
-
-      <div className="mt-4 flex justify-center gap-2">
-        <Button
-          onClick={() => setPage(p => Math.max(1, p - 1))}
-          disabled={page === 1}
-        >
-          Previous
-        </Button>
-        <span className="py-2 px-4">
-          Page {page} of {totalPages}
-        </span>
-        <Button
-          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-          disabled={page === totalPages}
-        >
-          Next
-        </Button>
-      </div>
+    
     </div>
   );
 };

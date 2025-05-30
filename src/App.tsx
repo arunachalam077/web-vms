@@ -16,11 +16,19 @@ import Signup from './components/dashboard/signup';
 import CheckoutPage from './pages/CheckoutPage';
 import PreRegistrationForm from './components/visitors/PreRegistrationForm';
 
+
 function App() {
   return (
     <Router>
       <AuthProvider>
-        <Toaster position="top-right" />
+        <Toaster position="top-right" toastOptions={{
+          duration: 4000,
+          style: {
+            fontSize: '0.875rem',
+            maxWidth: '350px',
+            padding: '8px 16px',
+          },
+        }} />
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<Login />} />

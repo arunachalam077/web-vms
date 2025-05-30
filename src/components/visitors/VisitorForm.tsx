@@ -161,42 +161,68 @@ const VisitorForm: React.FC = () => {
             <style>
               @media print {
                 @page {
-                  size: 80mm auto;
+                  size: 50mm 80mm;
                   margin: 0;
                 }
                 body {
-                  width: 80mm;
+                  width: 50mm;
+                  height: 80mm;
                   margin: 0;
                   padding: 0;
+                  box-sizing: border-box;
+                  text-align: left;
+                }
+                .ticket-container {
+                  width: 50mm;
+                  height: 80mm;
+                  margin: 0;
+                  padding: 0;
+                  box-sizing: border-box;
+                  display: flex;
+                  flex-direction: column;
+                  justify-content: flex-start;
+                  align-items: flex-start;
+                  text-align: left;
                 }
               }
               body {
                 font-family: Arial, sans-serif;
-                width: 80mm;
+                width: 50mm;
+                height: 80mm;
                 margin: 0;
                 padding: 0;
                 box-sizing: border-box;
+                text-align: left;
               }
               .ticket-container {
-                width: 100%;
-                padding: 0 0 0 0;
+                width: 50mm;
+                height: 80mm;
+                padding: 0;
                 box-sizing: border-box;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                align-items: flex-start;
+                text-align: left;
               }
               .header {
                 text-align: center;
                 font-weight: bold;
-                font-size: 22px;
-                margin-top: 8px;
-                margin-bottom: 12px;
+                font-size: 18px;
+                margin-top: 4px;
+                margin-bottom: 8px;
                 letter-spacing: 1px;
+                width: 100%;
               }
               .grid {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
-                row-gap: 8px;
-                column-gap: 12px;
-                font-size: 15px;
-                margin-bottom: 16px;
+                row-gap: 4px;
+                column-gap: 6px;
+                font-size: 11px;
+                margin-bottom: 8px;
+                width: 100%;
+                text-align: left;
               }
               .label {
                 font-weight: bold;
@@ -206,17 +232,19 @@ const VisitorForm: React.FC = () => {
                 text-align: left;
               }
               .disclaimer {
-                font-size: 10px;
-                margin-top: 18px;
+                font-size: 7px;
+                margin-top: 8px;
                 border-top: 1px solid #eee;
-                padding-top: 6px;
-                line-height: 1.3;
+                padding-top: 3px;
+                line-height: 1.2;
+                width: 100%;
+                text-align: left;
               }
             </style>
           </head>
           <body>
             <div class="ticket-container">
-              <div class="header">PARKWOOD</div>
+              <div class="header">JACIN SECURIall TY VMS</div>
               <div class="grid">
                 <div class="label">Name</div>
                 <div class="value">${printData?.fullName || ''}</div>

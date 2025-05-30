@@ -40,14 +40,14 @@ const QRGenerator: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto mt-8">
+    <div className="max-w-2xl mx-auto mt-4 sm:mt-8 px-3 sm:px-0">
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">QR Code Generator</h2>
+        <div className="p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4">QR Code Generator</h2>
           
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
-              <label htmlFor="text" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="text" className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 Enter Text or URL
               </label>
               <input
@@ -55,7 +55,7 @@ const QRGenerator: React.FC = () => {
                 id="text"
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 placeholder="Enter text to generate QR code"
               />
             </div>
@@ -63,7 +63,7 @@ const QRGenerator: React.FC = () => {
             <button
               onClick={generateQRCode}
               disabled={!text.trim() || isGenerating}
-              className={`w-full px-4 py-2 rounded-lg text-white flex items-center justify-center ${
+              className={`w-full px-3 sm:px-4 py-2 rounded-lg text-white flex items-center justify-center text-sm ${
                 text.trim() && !isGenerating
                   ? 'bg-primary-600 hover:bg-primary-700'
                   : 'bg-gray-400 cursor-not-allowed'
@@ -71,7 +71,7 @@ const QRGenerator: React.FC = () => {
             >
               {isGenerating ? (
                 <>
-                  <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                  <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
                   Generating...
                 </>
               ) : (
@@ -80,20 +80,20 @@ const QRGenerator: React.FC = () => {
             </button>
             
             {qrCodeUrl && (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div className="flex justify-center">
                   <img
                     src={qrCodeUrl}
                     alt="Generated QR Code"
-                    className="w-64 h-64"
+                    className="w-48 h-48 sm:w-64 sm:h-64"
                   />
                 </div>
                 
                 <button
                   onClick={handleDownload}
-                  className="w-full px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center"
+                  className="w-full px-3 sm:px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center text-sm"
                 >
-                  <Download className="w-5 h-5 mr-2" />
+                  <Download className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                   Download QR Code
                 </button>
               </div>
