@@ -89,22 +89,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             </NavLink>
           </li>
           <li>
-            <NavLink 
-              to="/qr-generator" 
-              className={({ isActive }) => 
-                `flex items-center p-3 rounded-lg ${
-                  isActive 
-                    ? 'bg-primary-800 text-white' 
-                    : 'text-gray-300 hover:bg-primary-900'
-                }`
-              }
-              onClick={onClose}
-            >
-              <QrCode className="w-5 h-5" />
-              <span className="ml-3">QR Generator</span>
-            </NavLink>
-          </li>
-          <li>
             <NavLink
               to="/pre-registration"
               className={({ isActive }) => 

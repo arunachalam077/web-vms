@@ -1,59 +1,74 @@
 import React, { useEffect, useRef, useState } from 'react';
-import QrScanner from 'qr-scanner';
+import { Html5Qrcode, Html5QrcodeCameraScanConfig, CameraDevice } from 'html5-qrcode';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { checkOutVisitor } from '../services/visitorService';
 
 const QRScanner: React.FC = () => {
-  const [hasCamera, setHasCamera] = useState(false);
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const scannerRef = useRef<QrScanner | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
-  const [checkoutResult, setCheckoutResult] = useState(null);
+  const [checkoutResult, setCheckoutResult] = useState<{ success: boolean; visitor?: unknown; error?: string } | null>(null);
+  const [cameras, setCameras] = useState<CameraDevice[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
+  const html5QrcodeRef = useRef<Html5Qrcode | null>(null);
+  const scannerId = 'qr-scanner-html5';
 
+  // Fetch available cameras on mount
   useEffect(() => {
-    let scanner: QrScanner | null = null;
-
-    const checkCamera = async () => {
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        console.log('Devices:', devices);
-        const hasVideoDevice = devices.some(device => device.kind === 'videoinput');
-        setHasCamera(hasVideoDevice);
-        
-        if (hasVideoDevice && videoRef.current) {
-          scanner = new QrScanner(
-            videoRef.current,
-            result => {
-              setScanResult(result.data);
-              scanner?.stop();
-            },
-            {
-              highlightScanRegion: true,
-              highlightCodeOutline: true,
-            }
-          );
-          scannerRef.current = scanner;
-          await scanner.start();
-          console.log('Camera started');
-        }
-      } catch (err) {
-        setError('Failed to access camera. Please ensure camera permissions are granted.');
-        console.error('Camera access error:', err);
+    Html5Qrcode.getCameras().then(devices => {
+      setCameras(devices);
+      if (devices.length > 0) {
+        setSelectedCameraId(devices[0].id);
       }
-    };
-
-    checkCamera();
-
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.destroy();
-        scannerRef.current = null;
-      }
-    };
+    }).catch(err => {
+      setError('No camera found or camera access denied.');
+      console.error('Camera error:', err);
+    });
   }, []);
 
+  // Start scanner when camera is selected
+  useEffect(() => {
+    if (!selectedCameraId) return;
+    if (html5QrcodeRef.current) {
+      html5QrcodeRef.current.stop();
+      html5QrcodeRef.current.clear();
+      startScanner();
+    } else {
+      startScanner();
+    }
+    // Cleanup on unmount
+    return () => {
+      if (html5QrcodeRef.current) {
+        html5QrcodeRef.current.stop();
+        html5QrcodeRef.current.clear();
+      }
+    };
+    // eslint-disable-next-line
+  }, [selectedCameraId]);
+
+  const startScanner = () => {
+    const config: Html5QrcodeCameraScanConfig = {
+      fps: 10,
+      qrbox: { width: 250, height: 250 },
+    };
+    html5QrcodeRef.current = new Html5Qrcode(scannerId);
+    html5QrcodeRef.current.start(
+      selectedCameraId!,
+      config,
+      (decodedText) => {
+        setScanResult(decodedText);
+        html5QrcodeRef.current?.stop();
+      },
+      () => {
+        // Optionally handle scan errors
+      }
+    ).catch(err => {
+      setError('Failed to start camera.');
+      console.error('Start error:', err);
+    });
+  };
+
+  // Handle visitor checkout after scan
   useEffect(() => {
     if (scanResult) {
       setCheckoutLoading(true);
@@ -68,68 +83,50 @@ const QRScanner: React.FC = () => {
     }
   }, [scanResult]);
 
-  const handleReset = async () => {
+  const handleReset = () => {
     setScanResult(null);
     setCheckoutResult(null);
     setCheckoutLoading(false);
-
-    if (scannerRef.current) {
-      await scannerRef.current.stop();
-      scannerRef.current.destroy();
-      scannerRef.current = null;
-    }
-
-    if (videoRef.current) {
-      const scanner = new QrScanner(
-        videoRef.current,
-        result => {
-          setScanResult(result.data);
-          scanner.stop();
-        },
-        {
-          highlightScanRegion: true,
-          highlightCodeOutline: true,
-        }
-      );
-      scannerRef.current = scanner;
-      await scanner.start();
-      console.log('Camera restarted');
+    if (selectedCameraId) {
+      startScanner();
     }
   };
-
-  if (!hasCamera) {
-    return (
-      <div className="max-w-2xl mx-auto mt-4 sm:mt-8 p-4 sm:p-6 bg-white rounded-lg shadow-sm">
-        <div className="flex items-center text-error-500 mb-3 sm:mb-4">
-          <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-          <h2 className="text-lg sm:text-xl font-semibold">No Camera Available</h2>
-        </div>
-        <p className="text-sm sm:text-base text-gray-600">
-          A camera is required to scan QR codes. Please ensure your device has a camera and you've granted the necessary permissions.
-        </p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="max-w-2xl mx-auto mt-4 sm:mt-8 p-4 sm:p-6 bg-white rounded-lg shadow-sm">
-        <div className="flex items-center text-error-500 mb-3 sm:mb-4">
-          <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
-          <h2 className="text-lg sm:text-xl font-semibold">Error</h2>
-        </div>
-        <p className="text-sm sm:text-base text-gray-600">{error}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-2xl mx-auto mt-4 sm:mt-8 px-3 sm:px-0">
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="p-4 sm:p-6">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-3 sm:mb-4">QR Code Scanner</h2>
-          
-          {scanResult ? (
+          {cameras.length > 1 && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Select Camera:</label>
+              <select
+                className="w-full border rounded p-2"
+                value={selectedCameraId || ''}
+                onChange={e => setSelectedCameraId(e.target.value)}
+              >
+                {cameras.map(cam => (
+                  <option key={cam.id} value={cam.id}>{cam.label || cam.id}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          {error && (
+            <div className="flex items-center text-error-500 mb-3 sm:mb-4">
+              <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
+              <span>{error}</span>
+            </div>
+          )}
+          {!scanResult ? (
+            <div className="space-y-3 sm:space-y-4">
+              <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
+                <div id={scannerId} className="w-full h-full" />
+              </div>
+              <p className="text-center text-xs sm:text-sm text-gray-600">
+                Position the QR code within the camera view to scan
+              </p>
+            </div>
+          ) : (
             <div className="space-y-3 sm:space-y-4">
               <div className="flex items-center text-success-500">
                 <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 mr-2" />
@@ -137,18 +134,18 @@ const QRScanner: React.FC = () => {
               </div>
               <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
                 <p className="text-sm sm:text-base text-gray-600 font-medium">Scanned Content:</p>
-                <p className="mt-2 text-sm sm:text-base text-gray-800">{scanResult}</p>
+                <p className="mt-2 text-sm sm:text-base text-gray-800 break-all">{scanResult}</p>
               </div>
-              {scanResult && checkoutLoading && (
+              {checkoutLoading && (
                 <div className="text-center text-blue-600">Checking out visitor...</div>
               )}
-              {scanResult && checkoutResult && checkoutResult.success && (
+              {checkoutResult && checkoutResult.success && (
                 <div className="text-center text-green-600">
-                  Visitor checked out: {checkoutResult.visitor.fullName}<br/>
-                  Time: {new Date(checkoutResult.visitor.checkOutTime).toLocaleString()}
+                  Visitor checked out: {typeof checkoutResult.visitor === 'object' && checkoutResult.visitor && 'fullName' in checkoutResult.visitor ? (checkoutResult.visitor as { fullName?: string }).fullName : ''}<br/>
+                  Time: {typeof checkoutResult.visitor === 'object' && checkoutResult.visitor && 'checkOutTime' in checkoutResult.visitor ? new Date((checkoutResult.visitor as { checkOutTime?: string }).checkOutTime ?? '').toLocaleString() : ''}
                 </div>
               )}
-              {scanResult && checkoutResult && !checkoutResult.success && (
+              {checkoutResult && !checkoutResult.success && (
                 <div className="text-center text-red-600">
                   Checkout failed: {checkoutResult.error}
                 </div>
@@ -159,18 +156,6 @@ const QRScanner: React.FC = () => {
               >
                 Scan Another Code
               </button>
-            </div>
-          ) : (
-            <div className="space-y-3 sm:space-y-4">
-              <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
-                <video
-                  ref={videoRef}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <p className="text-center text-xs sm:text-sm text-gray-600">
-                Position the QR code within the camera view to scan
-              </p>
             </div>
           )}
         </div>

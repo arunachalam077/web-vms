@@ -8,7 +8,6 @@ import Dashboard from './pages/Dashboard';
 import VisitorLog from './pages/VisitorLog';
 import RegisterVisitor from './pages/RegisterVisitor';
 import QRScanner from './pages/QRScanner';
-import QRGenerator from './pages/QRGenerator';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
 import Login from './components/dashboard/login';
@@ -41,7 +40,6 @@ function App() {
             <Route path="/visitors" element={<VisitorLog />} />
             <Route path="/register" element={<RegisterVisitor />} />
             <Route path="/scan" element={<QRScanner />} />
-            <Route path="/qr-generator" element={<QRGenerator />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/help" element={<Help />} />
           </Route>
