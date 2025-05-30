@@ -1,5 +1,5 @@
 // components/VisitorForm.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Shield } from 'lucide-react';
 import api from '../../services/api';
 
@@ -60,6 +60,7 @@ const VisitorForm: React.FC = () => {
   const [printData, setPrintData] = useState<VisitorData | null>(null);
   
   const printRef = useRef<HTMLDivElement>(null);
+  const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   
   const validateForm = () => {
     const newErrors: Partial<VisitorFormData> = {};
@@ -147,13 +148,16 @@ const VisitorForm: React.FC = () => {
   };
   
   const handlePrint = () => {
+    let qrDataUrl = '';
+    if (qrCanvasRef.current) {
+      qrDataUrl = qrCanvasRef.current.toDataURL();
+    }
     if (printRef.current) {
       const printWindow = window.open('', '_blank', 'width=400,height=300');
       if (!printWindow) {
         alert("Please allow pop-ups to print the visitor pass");
         return;
       }
-
       const printContent = `
         <html>
           <head>
@@ -240,6 +244,16 @@ const VisitorForm: React.FC = () => {
                 width: 100%;
                 text-align: left;
               }
+              .qr-container {
+                margin: 8px 0;
+                text-align: center;
+                width: 100%;
+              }
+              .qr-label {
+                font-size: 8px;
+                margin-top: 2px;
+                text-align: center;
+              }
             </style>
           </head>
           <body>
@@ -257,6 +271,10 @@ const VisitorForm: React.FC = () => {
                 <div class="label">Exit Code</div>
                 <div class="value">${exitCode}</div>
               </div>
+              <div class="qr-container">
+                <img src="${qrDataUrl}" width="48" height="48" alt="Exit QR" />
+                <div class="qr-label">Exit QR</div>
+              </div>
               <div class="disclaimer">
                 <b>Disclaimer Notice:</b> The management is not responsible for any theft, damage, or other misdemeanor howsoever caused to vehicles and their equipment contents therein parked in the basement in a manner that does not disrupt the flow of traffic.
               </div>
@@ -272,12 +290,20 @@ const VisitorForm: React.FC = () => {
           </body>
         </html>
       `;
-
       printWindow.document.open();
       printWindow.document.write(printContent);
       printWindow.document.close();
     }
   };
+  
+  // After exitCode is set, render the QR code into the hidden canvas
+  useEffect(() => {
+    if (exitCode && qrCanvasRef.current) {
+      import('qrcode').then(QR => {
+        QR.toCanvas(qrCanvasRef.current, exitCode, { width: 48, margin: 0 });
+      });
+    }
+  }, [exitCode]);
   
   return (
     <div className="max-w-2xl mx-auto p-6">
@@ -306,6 +332,9 @@ const VisitorForm: React.FC = () => {
                     <div className="value">{printData?.phoneNumber ? printData.phoneNumber.replace(/(\d{2})\d{4}(\d{2})/, '$1****$2') : ''}</div>
                     <div className="label">Exit Code</div>
                     <div className="value">{exitCode}</div>
+                  </div>
+                  <div style={{ margin: '8px 0', textAlign: 'center' }}>
+                    <canvas ref={qrCanvasRef} style={{ display: 'none' }} width={48} height={48}></canvas>
                   </div>
                   <div className="disclaimer">
                     <b>Disclaimer Notice:</b> The management is not responsible for any theft, damage, or other misdemeanor howsoever caused to vehicles and their equipment contents therein parked in the basement in a manner that does not disrupt the flow of traffic.

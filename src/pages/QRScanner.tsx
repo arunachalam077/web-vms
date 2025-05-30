@@ -1,36 +1,42 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QrScanner from 'qr-scanner';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { checkOutVisitor } from '../services/visitorService';
 
 const QRScanner: React.FC = () => {
   const [hasCamera, setHasCamera] = useState(false);
   const [scanResult, setScanResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [qrScanner, setQrScanner] = useState<QrScanner | null>(null);
+  const scannerRef = useRef<QrScanner | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutResult, setCheckoutResult] = useState(null);
 
   useEffect(() => {
+    let scanner: QrScanner | null = null;
+
     const checkCamera = async () => {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
+        console.log('Devices:', devices);
         const hasVideoDevice = devices.some(device => device.kind === 'videoinput');
         setHasCamera(hasVideoDevice);
         
         if (hasVideoDevice && videoRef.current) {
-          const scanner = new QrScanner(
+          scanner = new QrScanner(
             videoRef.current,
             result => {
               setScanResult(result.data);
-              scanner.stop();
+              scanner?.stop();
             },
             {
               highlightScanRegion: true,
               highlightCodeOutline: true,
             }
           );
-          
-          setQrScanner(scanner);
+          scannerRef.current = scanner;
           await scanner.start();
+          console.log('Camera started');
         }
       } catch (err) {
         setError('Failed to access camera. Please ensure camera permissions are granted.');
@@ -41,16 +47,53 @@ const QRScanner: React.FC = () => {
     checkCamera();
 
     return () => {
-      if (qrScanner) {
-        qrScanner.destroy();
+      if (scannerRef.current) {
+        scannerRef.current.destroy();
+        scannerRef.current = null;
       }
     };
   }, []);
 
-  const handleReset = () => {
+  useEffect(() => {
+    if (scanResult) {
+      setCheckoutLoading(true);
+      checkOutVisitor(scanResult)
+        .then(visitor => {
+          setCheckoutResult({ success: true, visitor });
+        })
+        .catch(err => {
+          setCheckoutResult({ success: false, error: err.message });
+        })
+        .finally(() => setCheckoutLoading(false));
+    }
+  }, [scanResult]);
+
+  const handleReset = async () => {
     setScanResult(null);
-    if (qrScanner) {
-      qrScanner.start();
+    setCheckoutResult(null);
+    setCheckoutLoading(false);
+
+    if (scannerRef.current) {
+      await scannerRef.current.stop();
+      scannerRef.current.destroy();
+      scannerRef.current = null;
+    }
+
+    if (videoRef.current) {
+      const scanner = new QrScanner(
+        videoRef.current,
+        result => {
+          setScanResult(result.data);
+          scanner.stop();
+        },
+        {
+          highlightScanRegion: true,
+          highlightCodeOutline: true,
+        }
+      );
+      scannerRef.current = scanner;
+      await scanner.start();
+      console.log('Camera restarted');
     }
   };
 
@@ -96,6 +139,20 @@ const QRScanner: React.FC = () => {
                 <p className="text-sm sm:text-base text-gray-600 font-medium">Scanned Content:</p>
                 <p className="mt-2 text-sm sm:text-base text-gray-800">{scanResult}</p>
               </div>
+              {scanResult && checkoutLoading && (
+                <div className="text-center text-blue-600">Checking out visitor...</div>
+              )}
+              {scanResult && checkoutResult && checkoutResult.success && (
+                <div className="text-center text-green-600">
+                  Visitor checked out: {checkoutResult.visitor.fullName}<br/>
+                  Time: {new Date(checkoutResult.visitor.checkOutTime).toLocaleString()}
+                </div>
+              )}
+              {scanResult && checkoutResult && !checkoutResult.success && (
+                <div className="text-center text-red-600">
+                  Checkout failed: {checkoutResult.error}
+                </div>
+              )}
               <button
                 onClick={handleReset}
                 className="w-full px-3 sm:px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm sm:text-base"

@@ -70,7 +70,7 @@ export const authService = {
   },
 
   signup: async (fullName: string, email: string, password: string) => {
-    const response = await api.post('/users/register', { name: fullName, email, password });
+    const response = await api.post('/users/register', { fullName, email, password });
     return {
       token: response.data.token,
       user: {
