@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Visitor } from '../../types';
 import { ArrowUp, ArrowDown, MoreVertical, UserMinus, Trash, CheckCircle, XCircle } from 'lucide-react';
-import { formatDate, formatTime } from '../../utils/dateUtils';
+import { formatDate, formatTime, formatDuration } from '../../utils/dateUtils';
 import { checkOutVisitor, deleteVisitor } from '../../services/visitorService';
 import { format } from 'date-fns';
 import Button from '../ui/button';
@@ -23,9 +23,7 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [loading, setLoading] = useState<LoadingState>({});
   const [error, setError] = useState<string | null>(null);
-  const [debugMode, setDebugMode] = useState(true); // Set to true for debugging
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [debugMode] = useState(true); // Set to true for debugging
   
   // Debug function to inspect the visitor data structure
   useEffect(() => {
@@ -51,7 +49,9 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
         if (idLikeKeys.length > 0) {
           console.log("Potential ID fields found:", idLikeKeys);
           idLikeKeys.forEach(key => {
-            console.log(`  ${key}:`, (sampleVisitor as any)[key]);
+            if (sampleVisitor && typeof sampleVisitor === 'object' && key in sampleVisitor) {
+              console.log(`  ${key}:`, (sampleVisitor as unknown as Record<string, unknown>)[key]);
+            }
           });
         }
       } else {
@@ -127,8 +127,8 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
     }
   };
   
-  const handleDelete = async (visitor: Visitor) => {
-    const visitorId = getVisitorId(visitor) || `visitor-${index}`;
+  const handleDelete = async (visitor: Visitor, index?: number) => {
+    const visitorId = getVisitorId(visitor) || (typeof index === 'number' ? `visitor-${index}` : undefined);
     if (!visitorId) {
       setError('Visitor ID not found');
       return;
@@ -172,6 +172,14 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
       <div className="text-xs text-gray-500 mb-1">Purpose: <span className="font-medium text-gray-700">{visitor.purpose}</span></div>
       <div className="text-xs text-gray-500 mb-1">Visit Date: {formatDate(visitor.visitDate)}</div>
       <div className="text-xs text-gray-500 mb-1">Check In: {formatTime(visitor.checkInTime)}</div>
+      <div className="text-xs text-gray-500 mb-1">Duration: {
+        typeof visitor.checkInTime === 'string' && visitor.checkInTime
+          ? (typeof visitor.checkOutTime === 'string' && visitor.checkOutTime
+              ? formatDuration(visitor.checkInTime || '', visitor.checkOutTime || '')
+              : formatDuration(visitor.checkInTime || '', new Date().toISOString())
+            )
+          : '-'
+      }</div>
       <div className="text-xs text-gray-500 mb-1">Vehicle: {visitor.vehicleNumber}</div>
       {showActions && (
         <div className="flex justify-end mt-2">
@@ -326,6 +334,12 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
                 </th>
                 <th 
                   scope="col" 
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Duration
+                </th>
+                <th 
+                  scope="col" 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                   onClick={() => handleSort('status')}
                 >
@@ -379,6 +393,16 @@ const VisitorList: React.FC<VisitorListProps> = ({ visitors, onVisitorUpdate, sh
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatTime(visitor.checkInTime)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {
+                        typeof visitor.checkInTime === 'string' && visitor.checkInTime
+                          ? (typeof visitor.checkOutTime === 'string' && visitor.checkOutTime
+                              ? formatDuration(visitor.checkInTime || '', visitor.checkOutTime || '')
+                              : formatDuration(visitor.checkInTime || '', new Date().toISOString())
+                            )
+                          : '-'
+                      }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${

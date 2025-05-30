@@ -5,6 +5,7 @@ import { getAllVisitors, filterVisitors, getUniqueHosts } from '../services/visi
 import { Visitor, VisitorFilters as VisitorFiltersType } from '../types';
 import { UserPlus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { startOfDay, startOfWeek, startOfMonth, isAfter, parseISO } from 'date-fns';
 
 const VisitorLog: React.FC = () => {
   const [filters, setFilters] = useState<VisitorFiltersType>({
@@ -28,6 +29,27 @@ const VisitorLog: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalVisitors, setTotalVisitors] = useState(0);
   const [pageSize, setPageSize] = useState(10);
+  
+  const [allVisitors, setAllVisitors] = useState<Visitor[]>([]);
+  
+  // Fetch all visitors for stats (no pagination)
+  useEffect(() => {
+    getAllVisitors(1, 10000).then(result => {
+      setAllVisitors(result.data || []);
+    });
+  }, []);
+  
+  // Calculate daily, weekly, and monthly visitors from allVisitors
+  const now = new Date();
+  const dailyVisitors = allVisitors.filter(v =>
+    v.checkInTime && isAfter(parseISO(v.checkInTime), startOfDay(now))
+  );
+  const weeklyVisitors = allVisitors.filter(v =>
+    v.checkInTime && isAfter(parseISO(v.checkInTime), startOfWeek(now, { weekStartsOn: 1 }))
+  );
+  const monthlyVisitors = allVisitors.filter(v =>
+    v.checkInTime && isAfter(parseISO(v.checkInTime), startOfMonth(now))
+  );
   
   // Fetch visitors from the backend
   const fetchVisitors = async () => {
@@ -172,6 +194,22 @@ const VisitorLog: React.FC = () => {
         onFilterChange={handleFilterChange} 
         hosts={hosts}
       />
+      
+      {/* Visitor Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="text-2xl font-bold text-primary-600">{dailyVisitors.length}</div>
+          <div className="text-xs text-gray-500 mt-1">Today</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="text-2xl font-bold text-primary-600">{weeklyVisitors.length}</div>
+          <div className="text-xs text-gray-500 mt-1">This Week</div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="text-2xl font-bold text-primary-600">{monthlyVisitors.length}</div>
+          <div className="text-xs text-gray-500 mt-1">This Month</div>
+        </div>
+      </div>
       
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
