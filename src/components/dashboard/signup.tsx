@@ -63,8 +63,8 @@ const Signup: React.FC = () => {
       setIsLoading(true);
       await signup(fullName, email, password);
       navigate('/dashboard');
-    } catch (err) {
-      setError('Signup failed. Please try again.');
+    } catch (err: any) {
+      setError(err.message || 'Signup failed. Please try again.');
       console.error('Signup error:', err);
     } finally {
       setIsLoading(false);

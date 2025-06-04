@@ -1,8 +1,6 @@
 import axios from 'axios';
 
-const API_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:3001/api'
-  : 'http://192.168.1.61:3001/api';
+const API_URL = 'http://localhost:3001/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -70,14 +68,21 @@ export const authService = {
   },
 
   signup: async (fullName: string, email: string, password: string) => {
-    const response = await api.post('/users/register', { fullName, email, password });
-    return {
-      token: response.data.token,
-      user: {
-        fullName: response.data.name,
-        email: response.data.email
+    try {
+      const response = await api.post('/users/register', { fullName, email, password });
+      return {
+        token: response.data.token,
+        user: {
+          fullName: response.data.name,
+          email: response.data.email
+        }
+      };
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
       }
-    };
+      throw new Error('Signup failed. Please try again.');
+    }
   },
 
   logout: () => {

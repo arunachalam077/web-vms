@@ -12,7 +12,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://192.168.1.61:5173', 'http://192.168.1.61:5174'],
+  origin: true, // Allow all origins in development
   credentials: true
 }));
 app.use(express.json());

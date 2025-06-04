@@ -73,9 +73,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       setUser(userData);
       navigate('/');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Signup failed', error);
-      throw new Error('Signup failed. Please try again.');
+      throw error; // Pass through the original error
     } finally {
       setIsLoading(false);
     }
